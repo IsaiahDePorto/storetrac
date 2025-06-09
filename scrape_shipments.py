@@ -15,8 +15,8 @@ LOGIN_URL = (
     "https://auth.gln.com/IdentityService/login?appId=526789C9-0A46-488A-AF55-289458F78EFD&"
     "returnUrl=https://coach.pcstrac.com/getGlnSSO.php&tenant=coach"
 )
-USERNAME = "Coh4501"
-PASSWORD = "Coach1181"
+USERNAME = os.getenv("COACH_USERNAME", "Coh4501")
+PASSWORD = os.getenv("COACH_PASSWORD", "Coach1181")
 
 UPS_TRACKING_API_URL = "https://onlinetools.ups.com/track/v1/details/{tracking_number}"
 # Replace with a valid UPS API key/token

@@ -9,7 +9,9 @@ links for shipments scheduled to arrive on the current day, and emails a summary
    ```bash
    pip install -r requirements.txt
    ```
-2. Export environment variables for UPS and email credentials:
+2. Export environment variables for login, UPS, and email credentials:
+   - `COACH_USERNAME` – Coach PCS username (defaults to `Coh4501`)
+   - `COACH_PASSWORD` – Coach PCS password (defaults to `Coach1181`)
    - `UPS_API_KEY` – UPS API key for tracking lookups
    - `EMAIL_FROM` – email address used to send the summary
    - `EMAIL_PASSWORD` – password or app password for the above account
