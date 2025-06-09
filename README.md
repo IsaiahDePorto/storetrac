@@ -26,7 +26,6 @@ The login form asks for the username first and then displays the password
 field. The script now clicks **Next** after entering the username before
 submitting the password. It also handles the optional "Add Two-Step
 Verification" page by pressing **Skip For Now** if it appears.
-
 The script uses Selenium in headless mode to navigate the website, handle an optional
 "Add Two-Step Verification" page by clicking **Skip For Now**, then selects the
 shipment matching today's date. For each category (e.g. `D01`), it collects item
