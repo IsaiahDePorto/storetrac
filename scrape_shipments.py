@@ -12,13 +12,16 @@ from selenium.webdriver.support import expected_conditions as EC
 import requests
 
 LOGIN_URL = (
-    "https://auth.gln.com/IdentityService/login?appId=526789C9-0A46-488A-AF55-289458F78EFD&"
+    "https://auth.gln.com/IdentityService/login?"
+    "appId=526789C9-0A46-488A-AF55-289458F78EFD&"
     "returnUrl=https://coach.pcstrac.com/getGlnSSO.php&tenant=coach"
 )
-USERNAME = os.getenv("COACH_USERNAME", "Coh4501")
-PASSWORD = os.getenv("COACH_PASSWORD", "Coach1181")
+USERNAME = os.getenv("COACH_USERNAME")
+PASSWORD = os.getenv("COACH_PASSWORD")
 
-UPS_TRACKING_API_URL = "https://onlinetools.ups.com/track/v1/details/{tracking_number}"
+UPS_TRACKING_API_URL = (
+    "https://onlinetools.ups.com/track/v1/details/{tracking_number}"
+)
 # Replace with a valid UPS API key/token
 UPS_API_KEY = os.getenv("UPS_API_KEY", "YOUR_UPS_API_KEY")
 
@@ -38,9 +41,9 @@ class CoachScraper:
 
     def login(self):
         self.driver.get(LOGIN_URL)
-        # The login form requires submitting the username first and then the
-        # password on the next screen. Older versions of the script attempted to
-        # fill fields that were not present which caused a TimeoutException.
+        # The login form submits the username first, then asks for the
+        # password on the next screen. Older versions tried to fill
+        # non-existent fields and triggered a TimeoutException.
         user_field = self.wait.until(
             EC.presence_of_element_located((By.ID, "UserName"))
         )
@@ -48,7 +51,7 @@ class CoachScraper:
         self.driver.find_element(By.ID, "UsernameNext").click()
 
         pass_field = self.wait.until(
-            EC.presence_of_element_located((By.ID, "Password"))
+            EC.element_to_be_clickable((By.ID, "Password"))
         )
         pass_field.send_keys(PASSWORD)
         self.driver.find_element(By.ID, "Login").click()
@@ -56,7 +59,9 @@ class CoachScraper:
         # Optional two factor page
         try:
             skip_btn = self.wait.until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Skip For Now')]"))
+                EC.presence_of_element_located(
+                    (By.XPATH, "//button[contains(text(), 'Skip For Now')]")
+                )
             )
             skip_btn.click()
         except Exception:
@@ -64,14 +69,24 @@ class CoachScraper:
 
     def select_today_shipment(self):
         today = datetime.datetime.now().strftime("%m/%d/%Y")
-        row_xpath = f"//table//th[contains(text(), 'In Store Delivery Date')]/..//td[contains(text(), '{today}')]/.."
-        row = self.wait.until(EC.element_to_be_clickable((By.XPATH, row_xpath)))
+        row_xpath = (
+            "//table//th[contains(text(), 'In Store Delivery Date')]/..//td"
+            f"[contains(text(), '{today}')]/.."
+        )
+        row = self.wait.until(
+            EC.element_to_be_clickable((By.XPATH, row_xpath))
+        )
         row.click()
 
     def scrape_categories(self) -> Dict[str, List[Dict]]:
         data = defaultdict(list)
         categories = self.wait.until(
-            EC.presence_of_all_elements_located((By.XPATH, "//a[contains(@href, 'D') and contains(@href, '=')]"))
+            EC.presence_of_all_elements_located(
+                (
+                    By.XPATH,
+                    "//a[contains(@href, 'D') and contains(@href, '=')]",
+                )
+            )
         )
         for category in categories:
             cat_code = category.text.strip()
@@ -84,12 +99,21 @@ class CoachScraper:
     def scrape_items(self) -> List[Dict]:
         items = []
         rows = self.wait.until(
-            EC.presence_of_all_elements_located((By.XPATH, "//table//tr[td]"))
+            EC.presence_of_all_elements_located(
+                (By.XPATH, "//table//tr[td]")
+            )
         )
         for row in rows:
-            desc = row.find_element(By.XPATH, "./td[contains(@class, 'Description')]").text
-            sku = row.find_element(By.XPATH, "./td[contains(@class, 'SKU') or contains(text(), 'SKU')]").text
-            count = row.find_element(By.XPATH, "./td[contains(@class, 'Item')]").text
+            desc = row.find_element(
+                By.XPATH, "./td[contains(@class, 'Description')]"
+            ).text
+            sku = row.find_element(
+                By.XPATH,
+                "./td[contains(@class, 'SKU') or contains(text(), 'SKU')]",
+            ).text
+            count = row.find_element(
+                By.XPATH, "./td[contains(@class, 'Item')]"
+            ).text
             row.click()
             tracking_info = self.scrape_tracking()
             row_data = {
@@ -159,10 +183,15 @@ def send_email(results: Dict[str, List[Dict]], unique_count: int):
         lines.append(f"Category {cat}:")
         for item in items:
             for tr in item["tracking"]:
-                if tr["delivery_date"] == datetime.datetime.now().strftime("%Y-%m-%d"):
-                    lines.append(
-                        f"{item['description']} - {item['sku']} - {item['count']} - {tr['tracking_number']} - {tr['delivery_date']}"
+                if tr["delivery_date"] == datetime.datetime.now().strftime(
+                    "%Y-%m-%d"
+                ):
+                    line = (
+                        f"{item['description']} - {item['sku']} - "
+                        f"{item['count']} - {tr['tracking_number']} - "
+                        f"{tr['delivery_date']}"
                     )
+                    lines.append(line)
         lines.append("")
     lines.append(f"Total unique tracking numbers: {unique_count}")
     body = "\n".join(lines)
