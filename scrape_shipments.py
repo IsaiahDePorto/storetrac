@@ -15,8 +15,8 @@ LOGIN_URL = (
     "https://auth.gln.com/IdentityService/login?appId=526789C9-0A46-488A-AF55-289458F78EFD&"
     "returnUrl=https://coach.pcstrac.com/getGlnSSO.php&tenant=coach"
 )
-USERNAME = "Coh4501"
-PASSWORD = "Coach1181"
+USERNAME = os.getenv("COACH_USERNAME", "Coh4501")
+PASSWORD = os.getenv("COACH_PASSWORD", "Coach1181")
 
 UPS_TRACKING_API_URL = "https://onlinetools.ups.com/track/v1/details/{tracking_number}"
 # Replace with a valid UPS API key/token
@@ -38,9 +38,20 @@ class CoachScraper:
 
     def login(self):
         self.driver.get(LOGIN_URL)
-        self.wait.until(EC.presence_of_element_located((By.ID, "username"))).send_keys(USERNAME)
-        self.driver.find_element(By.ID, "password").send_keys(PASSWORD)
-        self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+        # The login form requires submitting the username first and then the
+        # password on the next screen. Older versions of the script attempted to
+        # fill fields that were not present which caused a TimeoutException.
+        user_field = self.wait.until(
+            EC.presence_of_element_located((By.ID, "UserName"))
+        )
+        user_field.send_keys(USERNAME)
+        self.driver.find_element(By.ID, "UsernameNext").click()
+
+        pass_field = self.wait.until(
+            EC.presence_of_element_located((By.ID, "Password"))
+        )
+        pass_field.send_keys(PASSWORD)
+        self.driver.find_element(By.ID, "Login").click()
 
         # Optional two factor page
         try:
