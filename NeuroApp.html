@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Neurometabolic Friction Model</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-red: #f43f5e;
+            --accent-gold: #fbbf24;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 400px;
+            background-color: var(--bg-panel);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            border-right: 1px solid #334155;
+            box-sizing: border-box;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            line-height: 1.2;
+            color: var(--accent-blue);
+        }
+
+        p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .concept-box {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .concept-box h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #334155;
+            color: white;
+            border: 1px solid #475569;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button:hover {
+            background: #475569;
+            border-color: var(--accent-blue);
+        }
+
+        button.active {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        canvas {
+            background-color: #020617;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 100%;
+            border: 1px solid #1e293b;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-card {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #metabolic-load { transition: color 0.3s; }
+        .danger { color: var(--accent-red); }
+        .optimal { color: var(--accent-blue); }
+        .buffer { color: var(--accent-gold); }
+
+        .legend {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h1>The Neurometabolic Friction Simulation</h1>
+            <p style="margin-top: 0.5rem;">Visualizing the High-VCI / Low-PSI Phenotype</p>
+        </div>
+
+        <div class="concept-box" id="explanation-box">
+            <h3>Select a state to begin.</h3>
+            <p>This simulation visualizes how your specific cognitive profile processes information differently than the statistical norm.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button id="btn-typical" onclick="setMode('typical')">
+                <span>1. The "Neurotypical" Baseline</span>
+                <span>→</span>
+            </button>
+            <button id="btn-isaiah" onclick="setMode('isaiah')">
+                <span>2. The "Sentinel" Profile (Your Baseline)</span>
+                <span>→</span>
+            </button>
+            <button id="btn-regulate" onclick="setMode('regulate')">
+                <span>3. Compensatory Regulation (INMI/Masking)</span>
+                <span>→</span>
+            </button>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-value optimal" id="snr-display">3.0</div>
+                <div class="metric-label">Signal-to-Noise Ratio</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value optimal" id="metabolic-load">25%</div>
+                <div class="metric-label">Metabolic Load</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background: #38bdf8;"></div> High-Value Data (VCI)</div>
+            <div class="legend-item"><div class="dot" style="background: #f43f5e;"></div> Sensory Noise</div>
+            <div class="legend-item"><div class="dot" style="background: #fbbf24;"></div> Regulatory Buffer (INMI)</div>
+        </div>
+        <canvas id="simCanvas" width="800" height="500"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Simulation State
+        let mode = 'idle'; // idle, typical, isaiah, regulate
+        let particles = [];
+        let frameCount = 0;
+        
+        // Metrics
+        let metabolicLoad = 0;
+        let processedSignals = 0;
+        let processedNoise = 0;
+
+        const explanations = {
+            'idle': {
+                title: "Information Theory of the Brain",
+                text: "Your WAIS-IV scores show a massive gap between Verbal Comprehension (120 - Superior) and Processing Speed (79 - Borderline). Most tests frame this as 'you are smart but slow.' But 2026 science suggests a different physics: your processing speed is a bottleneck caused by a leaky sensory filter."
+            },
+            'typical': {
+                title: "1. The Typical System",
+                text: "In a typical profile, the Thalamic Gate (TRN) effectively blocks background noise (red). Only relevant signals (blue) reach the cortex. Because the noise is filtered out early, the 'Processing Speed' pipeline has plenty of bandwidth to handle the remaining data efficiently."
+            },
+            'isaiah': {
+                title: "2. The Sentinel Profile (Your Scores)",
+                text: "Your Superior VCI (120) acts like a high-resolution sensor, pulling in massive amounts of data. But your sensory gate is 'leaky' (P50 suppression failure). You process EVERY sound and detail as high-priority. Your Borderline PSI (79) isn't inherently slow—it's utterly congested with the metabolic debris of filtering out the noise manually."
+            },
+            'regulate': {
+                title: "3. The Regulatory Buffer",
+                text: "Why do you need headphones or experience INMI (songs stuck in your head)? By introducing a predictable, low-entropy wave (gold), you artificially 'plug' the leaky filter. This prevents random noise from entering, clears the processing bottleneck, and allows your high VCI to function without burning up your metabolic energy."
+            }
+        };
+
+        class Particle {
+            constructor(type, startY) {
+                this.x = 0;
+                this.y = startY + (Math.random() * 40 - 20);
+                this.type = type; // 'signal', 'noise', 'buffer'
+                this.vx = (Math.random() * 2) + 1;
+                this.vy = 0;
+                this.radius = type === 'buffer' ? 4 : 3;
+                this.passedGate = false;
+                this.stuck = false;
+                this.wobble = Math.random() * Math.PI * 2;
+            }
+
+            update(settings) {
+                if (this.stuck) {
+                    this.x += (Math.random() - 0.5) * 0.5;
+                    this.y += (Math.random() - 0.5) * 0.5;
+                    return;
+                }
+
+                this.x += this.vx;
+                this.wobble += 0.1;
+                this.y += Math.sin(this.wobble) * 0.5;
+
+                // Approach Gate (x = 300)
+                if (this.x > 280 && this.x < 320 && !this.passedGate) {
+                    if (this.type === 'noise') {
+                        // Chance to block noise based on mode
+                        if (Math.random() > settings.gatePermeability) {
+                            this.stuck = true; // Blocked by filter
+                            this.vx = 0;
+                        }
+                    }
+                    if (this.type === 'signal') {
+                        // Signals might get caught in the crowd if permeability is high
+                        if (settings.bottleneck && Math.random() < 0.3) {
+                            this.vx *= 0.3; // Slowed down by traffic
+                        }
+                    }
+                    this.passedGate = true;
+                }
+
+                // Bottleneck Processor Area (x = 600)
+                if (this.x > 550 && this.x < 650) {
+                    // Calculate local density
+                    let nearby = particles.filter(p => p.x > 550 && p.x < 650 && !p.stuck).length;
+                    
+                    if (nearby > settings.processorBandwidth) {
+                        this.vx *= 0.8; // Traffic jam
+                        if (this.type === 'noise') metabolicLoad += 0.05;
+                    } else {
+                        this.vx = Math.min(this.vx + 0.1, 4); // Speed back up
+                    }
+                }
+
+                // Reached end
+                if (this.x > 800) {
+                    if (this.type === 'signal') processedSignals++;
+                    if (this.type === 'noise') processedNoise++;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                if (this.type === 'signal') {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.shadowColor = '#38bdf8';
+                } else if (this.type === 'noise') {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.shadowColor = '#f43f5e';
+                } else {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.shadowColor = '#fbbf24';
+                }
+                ctx.shadowBlur = this.stuck ? 0 : 5;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        const modeSettings = {
+            'idle': { spawnSignal: 0, spawnNoise: 0, gatePermeability: 0, processorBandwidth: 10, bottleneck: false },
+            'typical': { spawnSignal: 0.1, spawnNoise: 0.2, gatePermeability: 0.1, processorBandwidth: 25, bottleneck: false },
+            'isaiah': { spawnSignal: 0.3, spawnNoise: 0.5, gatePermeability: 0.8, processorBandwidth: 15, bottleneck: true },
+            'regulate': { spawnSignal: 0.3, spawnNoise: 0.5, gatePermeability: 0.2, processorBandwidth: 15, bottleneck: false }
+        };
+
+        function setMode(newMode) {
+            mode = newMode;
+            particles = []; // Clear current
+            metabolicLoad = 0;
+            processedSignals = 0;
+            processedNoise = 0;
+
+            // Update UI
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${newMode}`).classList.add('active');
+
+            const exp = explanations[newMode];
+            document.getElementById('explanation-box').innerHTML = `<h3>${exp.title}</h3><p>${exp.text}</p>`;
+        }
+
+        function drawEnvironment(settings) {
+            // Draw Sensory Intake
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.fillRect(0, 0, 300, 500);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('Sensory Environment (Intake)', 20, 30);
+
+            // Draw TRN Gate
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 15]);
+            ctx.beginPath();
+            ctx.moveTo(300, 0);
+            ctx.lineTo(300, 500);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillText('Thalamic Filter (TRN)', 310, 30);
+
+            // Draw Processing Bottleneck
+            let pipeWidth = settings.processorBandwidth * 4;
+            let pipeTop = 250 - pipeWidth / 2;
+            
+            ctx.fillStyle = mode === 'isaiah' ? 'rgba(244, 63, 94, 0.1)' : 'rgba(56, 189, 248, 0.05)';
+            if (mode === 'isaiah') {
+                 // Pulsing effect for high load
+                 const pulse = Math.sin(frameCount * 0.1) * 0.1;
+                 ctx.fillStyle = `rgba(244, 63, 94, ${0.1 + pulse})`;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(600, 0);
+            ctx.lineTo(600, pipeTop);
+            ctx.lineTo(800, pipeTop);
+            ctx.lineTo(800, 500);
+            ctx.lineTo(600, 500);
+            ctx.lineTo(600, pipeTop + pipeWidth);
+            ctx.lineTo(300, 500); // Angle back to gate
+            ctx.lineTo(300, 0);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillText('Cognitive Processor (PSI)', 610, pipeTop - 10);
+            
+            // Draw buffer wave if regulating
+            if (mode === 'regulate') {
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i < 300; i += 10) {
+                    ctx.lineTo(i, 250 + Math.sin((frameCount + i) * 0.05) * 50);
+                }
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
+                ctx.fillText('Predictable Audio / INMI', 20, 480);
+            }
+        }
+
+        function updateMetrics() {
+            if (mode === 'idle') return;
+            
+            // Calculate SNR
+            let snr = processedNoise === 0 ? processedSignals : processedSignals / processedNoise;
+            let snrEl = document.getElementById('snr-display');
+            snrEl.innerText = snr.toFixed(1);
+            
+            if (snr < 1.0) { snrEl.className = 'metric-value danger'; }
+            else { snrEl.className = 'metric-value optimal'; }
+
+            // Calculate Metabolic Load
+            // Base load gradually decreases, gets spiked by traffic jams
+            metabolicLoad = Math.max(0, metabolicLoad - 0.1); 
+            if (mode === 'isaiah') metabolicLoad += 0.5; // Inherent high cost
+            if (mode === 'typical') metabolicLoad = Math.min(metabolicLoad, 20);
+            if (mode === 'regulate') metabolicLoad = Math.min(metabolicLoad, 40); // Costs some energy to regulate, but caps out
+            
+            let loadPercent = Math.min(100, metabolicLoad);
+            let loadEl = document.getElementById('metabolic-load');
+            loadEl.innerText = Math.floor(loadPercent) + '%';
+            
+            if (loadPercent > 80) { loadEl.className = 'metric-value danger'; }
+            else if (loadPercent > 40) { loadEl.className = 'metric-value buffer'; }
+            else { loadEl.className = 'metric-value optimal'; }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const settings = modeSettings[mode];
+
+            drawEnvironment(settings);
+
+            // Spawning logic
+            if (Math.random() < settings.spawnSignal) {
+                particles.push(new Particle('signal', 250));
+            }
+            if (Math.random() < settings.spawnNoise) {
+                // If regulating, some noise is pre-blocked by the buffer wave
+                if (mode === 'regulate' && Math.random() < 0.7) {
+                    // Do nothing, noise masked
+                } else {
+                    particles.push(new Particle('noise', 250));
+                }
+            }
+            if (mode === 'regulate' && frameCount % 10 === 0) {
+                 particles.push(new Particle('buffer', 250 + Math.sin(frameCount * 0.05) * 50));
+            }
+
+            // Update and Draw Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.update(settings);
+                p.draw();
+
+                // Remove off-screen
+                if (p.x > 800) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Clean up stuck particles occasionally so it doesn't lag
+            if (frameCount % 100 === 0) {
+                particles = particles.filter(p => !p.stuck || p.x > 310);
+            }
+
+            if (frameCount % 10 === 0) updateMetrics();
+
+            frameCount++;
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize
+        setMode('idle');
+        animate();
+    </script>
+</body>
+</html>
